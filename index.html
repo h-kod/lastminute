@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NewsDeck — Google News Panoramik Takip</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>NewsDeck</h1>
+        <p>Google News RSS ile TweetDeck benzeri çoklu panel haber takibi</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="addTabBtn" class="btn primary">+ Tab Ekle</button>
+        <button id="manageBtn" class="btn">Tab Yönetimi</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="tabsGrid" class="tabs-grid" aria-live="polite"></section>
+    </main>
+
+    <dialog id="tabDialog" class="dialog">
+      <form id="tabForm" method="dialog" class="dialog-content">
+        <h2>Yeni Tab Ekle</h2>
+
+        <label>
+          Tab başlığı
+          <input required id="tabTitle" maxlength="40" placeholder="Örn: Teknoloji" />
+        </label>
+
+        <label>
+          Bölge
+          <select id="tabRegion">
+            <option value="TR">Türkiye</option>
+            <option value="US">ABD</option>
+            <option value="GLOBAL">Global</option>
+          </select>
+        </label>
+
+        <label>
+          Dil
+          <select id="tabLanguage">
+            <option value="tr">Türkçe</option>
+            <option value="en">İngilizce</option>
+          </select>
+        </label>
+
+        <label>
+          Arama terimi (boşsa gündem)
+          <input id="tabQuery" maxlength="80" placeholder="Örn: yapay zeka" />
+        </label>
+
+        <div class="actions">
+          <button type="button" value="cancel" class="btn" id="cancelTabBtn">Vazgeç</button>
+          <button type="submit" class="btn primary">Kaydet</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="manageDialog" class="dialog">
+      <section class="dialog-content wide">
+        <h2>Tab Yönetimi</h2>
+        <div class="manage-toolbar">
+          <label>
+            Sırala
+            <select id="sortMode">
+              <option value="time_desc">Zamana göre (yeni → eski)</option>
+              <option value="time_asc">Zamana göre (eski → yeni)</option>
+              <option value="title_asc">Başlığa göre (A-Z)</option>
+              <option value="source_asc">Kanala göre (A-Z)</option>
+            </select>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="hideRead" />
+            Okunan haberleri gizle
+          </label>
+        </div>
+
+        <div id="manageList" class="manage-list"></div>
+
+        <div class="actions">
+          <button id="closeManageBtn" class="btn primary">Kapat</button>
+        </div>
+      </section>
+    </dialog>
+
+    <template id="tabTemplate">
+      <article class="tab-column">
+        <header class="tab-header">
+          <div>
+            <h3 class="tab-title"></h3>
+            <small class="tab-meta"></small>
+          </div>
+          <button class="icon-btn refresh-btn" title="Yenile">↻</button>
+        </header>
+        <ul class="news-list"></ul>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
