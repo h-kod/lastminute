@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lastminute — Çoklu Google News Takip</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Lastminute</h1>
+        <p>Google News RSS ile çoklu kolon haber takip paneli</p>
+      </div>
+      <div class="topbar-actions">
+        <button id="addTabBtn" class="btn primary">+ Sekme Ekle</button>
+        <button id="manageBtn" class="btn">Sekme Yönetimi</button>
+      </div>
+    </header>
+
+    <section class="refresh-toolbar">
+      <span>Otomatik yenile:</span>
+      <button class="btn refresh-interval" data-seconds="5">5 sn</button>
+      <button class="btn refresh-interval" data-seconds="15">15 sn</button>
+      <button class="btn refresh-interval active" data-seconds="30">30 sn</button>
+      <button class="btn refresh-interval" data-seconds="60">60 sn</button>
+      <span id="timerStatus" class="muted"></span>
+    </section>
+
+    <main>
+      <section id="tabsGrid" class="tabs-grid" aria-live="polite"></section>
+    </main>
+
+    <dialog id="tabDialog" class="dialog">
+      <form id="tabForm" method="dialog" class="dialog-content">
+        <div class="dialog-title-row">
+          <h2 id="tabDialogTitle">Yeni Sekme</h2>
+          <button type="button" class="icon-btn" id="closeTabDialog">✕</button>
+        </div>
+
+        <input type="hidden" id="editingTabId" />
+
+        <label>
+          Sekme başlığı
+          <input required id="tabTitle" maxlength="40" placeholder="Örn: Teknoloji" />
+        </label>
+
+        <label>
+          Bölge
+          <select id="tabRegion">
+            <option value="TR">Türkiye</option>
+            <option value="US">ABD</option>
+            <option value="GLOBAL">Global</option>
+          </select>
+        </label>
+
+        <label>
+          Dil
+          <select id="tabLanguage">
+            <option value="tr">Türkçe</option>
+            <option value="en">İngilizce</option>
+          </select>
+        </label>
+
+        <label>
+          Arama terimi (boşsa gündem)
+          <input id="tabQuery" maxlength="80" placeholder="Örn: yapay zeka" />
+        </label>
+
+        <div class="actions">
+          <button type="button" class="btn" id="cancelTabBtn">İptal</button>
+          <button type="submit" class="btn primary" id="saveTabBtn">Kaydet</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="manageDialog" class="dialog">
+      <section class="dialog-content wide">
+        <div class="dialog-title-row">
+          <h2>Sekme Yönetimi</h2>
+          <button id="closeManageBtn" class="icon-btn">✕</button>
+        </div>
+        <p class="muted">Sekmeleri düzenleyin, yer değiştirin ve silin.</p>
+        <div id="manageList" class="manage-list"></div>
+      </section>
+    </dialog>
+
+    <template id="tabTemplate">
+      <article class="tab-column">
+        <header class="tab-header">
+          <div>
+            <h3 class="tab-title"></h3>
+            <small class="tab-meta"></small>
+          </div>
+          <div class="tab-actions">
+            <button class="icon-btn sort-btn" title="Zamana göre sırala">↓↑</button>
+            <button class="icon-btn refresh-btn" title="Yenile">↻</button>
+          </div>
+        </header>
+        <ul class="news-list"></ul>
+      </article>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
