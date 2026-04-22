@@ -2,6 +2,20 @@ const MAX_TABS = 10;
 const DEFAULT_INTERVAL = 15;
 const DEFAULT_FRESHNESS = "1h";
 const API_BASE_CANDIDATES = ["http://127.0.0.1:8080", "http://localhost:8080", window.location.origin];
+const LOCALE_STORAGE_KEY = "lastminute_locale";
+const SUPPORTED_LOCALES = ["tr", "en"];
+
+function normalizeLocale(value) {
+  return String(value || "").toLowerCase().startsWith("tr") ? "tr" : "en";
+}
+
+function detectLocale() {
+  const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+  if (stored) return normalizeLocale(stored);
+  return normalizeLocale(navigator.language || navigator.userLanguage || "en");
+}
+
+let locale = detectLocale();
 
 const defaultTabs = [
   { id: crypto.randomUUID(), title: "Global", region: "GLOBAL", lang: "en", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
@@ -29,8 +43,6 @@ const refreshTokens = new Map();
 const autoSearchTimers = new Map();
 const lastAutoSearchLengths = new Map();
 
-let locale = detectLocale();
-
 const ICON_URLS = {
   plus: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus-lg.svg",
   arrowLeft: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/arrow-left.svg",
@@ -39,9 +51,6 @@ const ICON_URLS = {
   sortNewest: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/sort-down-alt.svg",
   sortOldest: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/sort-up-alt.svg"
 };
-
-const LOCALE_STORAGE_KEY = "lastminute_locale";
-const SUPPORTED_LOCALES = ["tr", "en"];
 
 const I18N = {
   tr: {
@@ -185,16 +194,6 @@ const I18N = {
     }
   }
 };
-
-function normalizeLocale(value) {
-  return String(value || "").toLowerCase().startsWith("tr") ? "tr" : "en";
-}
-
-function detectLocale() {
-  const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-  if (stored) return normalizeLocale(stored);
-  return normalizeLocale(navigator.language || navigator.userLanguage || "en");
-}
 
 function t(key, vars = {}, targetLocale = locale) {
   const dictionary = I18N[targetLocale] || I18N.en;
