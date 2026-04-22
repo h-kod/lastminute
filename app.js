@@ -1,7 +1,7 @@
 const MAX_TABS = 10;
 const DEFAULT_INTERVAL = 15;
 const DEFAULT_FRESHNESS = "1h";
-const API_BASE_CANDIDATES = [window.location.origin];
+const FEED_PROXY_PATH = "/api/feed";
 const LOCALE_STORAGE_KEY = "lastminute_locale";
 const SUPPORTED_LOCALES = ["tr", "en"];
 
@@ -632,7 +632,7 @@ function getFeedUrl(tab) {
   const langCode = tab.lang === "tr" ? "tr" : "en-US";
   const regionCode = resolveRegion(tab);
   const ceidLang = tab.lang === "tr" ? "tr" : "en";
-  const query = [tab.query, `when:${tab.freshness || DEFAULT_FRESHNESS}`].filter(Boolean).join(" ");
+  const query = String(tab.query || "").trim() || (tab.lang === "tr" ? "haber" : "news");
 
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langCode}&gl=${regionCode}&ceid=${encodeURIComponent(`${regionCode}:${ceidLang}`)}`;
 }
@@ -671,25 +671,21 @@ async function fetchNews(tab) {
   const feedUrl = getFeedUrl(tab);
   let lastError = null;
 
-  for (const baseUrl of API_BASE_CANDIDATES) {
-    const apiUrl = `${baseUrl}/api/feed?url=${encodeURIComponent(feedUrl)}`;
-    try {
-      const response = await fetch(apiUrl, { cache: "no-store" });
-      if (!response.ok) {
-        lastError = new Error(t("proxyUnavailable", { base: baseUrl, status: response.status }));
-        continue;
-      }
-
-      const xmlText = await response.text();
-      if (!xmlText.trim()) {
-        lastError = new Error(t("rssEmpty", { base: baseUrl }));
-        continue;
-      }
-
-      return parseFeedItems(xmlText).filter((item) => isWithinFreshness(item.date, tab.freshness || DEFAULT_FRESHNESS));
-    } catch (err) {
-      lastError = err;
+  try {
+    const apiUrl = `${FEED_PROXY_PATH}?url=${encodeURIComponent(feedUrl)}`;
+    const response = await fetch(apiUrl, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(t("proxyUnavailable", { base: FEED_PROXY_PATH, status: response.status }));
     }
+
+    const xmlText = await response.text();
+    if (!xmlText.trim()) {
+      throw new Error(t("rssEmpty", { base: FEED_PROXY_PATH }));
+    }
+
+    return parseFeedItems(xmlText).filter((item) => isWithinFreshness(item.date, tab.freshness || DEFAULT_FRESHNESS));
+  } catch (err) {
+    lastError = err;
   }
 
   throw lastError || new Error(t("newsUnavailable"));
