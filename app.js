@@ -1,7 +1,7 @@
 const MAX_TABS = 10;
 const DEFAULT_INTERVAL = 15;
 const DEFAULT_FRESHNESS = "1h";
-const API_BASE_CANDIDATES = ["http://127.0.0.1:8080", "http://localhost:8080", window.location.origin];
+const API_BASE_CANDIDATES = [window.location.origin];
 const LOCALE_STORAGE_KEY = "lastminute_locale";
 const SUPPORTED_LOCALES = ["tr", "en"];
 
