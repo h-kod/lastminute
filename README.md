@@ -1,27 +1,45 @@
 # Lastminute
 
-Google News RSS kaynaklarından çoklu panel ile haber izleme uygulaması.
+![Lastminute screenshot](images/screenshot.jpeg)
 
-## Özellikler
+Lastminute is a compact multi-tab news dashboard built on top of Google News RSS. It lets you track multiple topics side by side, switch languages, change freshness windows, and keep the interface fast and focused.
 
-- Açılışta 4 sekme: Global, Türkiye, ABD, Trend 50.
-- En fazla 10 sekme ekleme.
-- Her sekme için düzenleme: başlık, bölge, dil, arama terimi, haber tazeliği.
-- Google News sorgularında `when:1h`, `when:3h`, `when:5h`, `when:10h` veya `when:1d` filtresi.
-- Her sekmede başlıktaki saat butonu ile zamana göre sıralama.
-- Sekme başlığı kart üzerinden doğrudan anahtar kelime olarak düzenlenebilir.
-- Kart başlığı 3 karakterlik aralıklarla otomatik arama tetikler.
-- Kart üstünde TR'ye çevir ve kompakt silme onayı bulunur.
-- Üst bar otomatik yenileme: 5, 15, 30, 60 saniye.
-- Sekme yönetimi: düzenle, yeniden konumlandır, sil.
-- Okunan haberleri gizleme.
-- Koyu, düşük beyazlı tema.
-- Yerel sunucu ile çalışır, RSS proxy `/api/feed` üzerinden hizmet verir.
+## Features
 
-## Çalıştırma
+- Multi-tab news dashboard with side-by-side topic cards.
+- Start with default tabs for Global, Turkey, USA, and Trends.
+- Add, edit, reorder, and delete tabs.
+- Per-tab language toggle, region, keyword, freshness, and sort order.
+- Google News freshness filters from `1h` to `1d`.
+- Auto-refresh intervals from `5s` to `1h`.
+- Read-state tracking for news items.
+- English and Turkish localization with browser-language defaults.
+- Netlify-ready RSS proxy via `/api/feed`.
+
+## Tech Stack
+
+- Vanilla HTML, CSS, and JavaScript
+- Node.js local dev server
+- Netlify Functions for RSS proxying
+
+## Run Locally
 
 ```bash
 node server.js
 ```
 
-Ardından `http://localhost:8080` adresine gidin.
+Then open:
+
+```text
+http://localhost:8080
+```
+
+
+## Project Structure
+
+- `index.html` - app shell and templates
+- `app.js` - UI logic, tab state, refresh handling, and RSS parsing
+- `styles.css` - theme, layout, and responsive styling
+- `server.js` - local development server
+- `netlify/functions/feed.js` - RSS proxy for production
+- `images/screenshot.jpeg` - project screenshot

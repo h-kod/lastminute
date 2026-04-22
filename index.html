@@ -10,23 +10,31 @@
     <header class="topbar">
       <div>
         <h1>Lastminute</h1>
-        <p>Google News RSS ile TweetDeck tarzı çoklu haber takip uygulaması</p>
+        <p id="appSubtitle">Google News RSS ile TweetDeck tarzı çoklu haber takip uygulaması</p>
       </div>
 
-      <label class="inline-control">
-        <span>Aralık</span>
-        <select id="intervalSelect">
-          <option value="5">5 sn</option>
-          <option value="15" selected>15 sn</option>
-          <option value="30">30 sn</option>
-          <option value="60">60 sn</option>
-        </select>
-      </label>
+      <div class="refresh-control">
+        <div id="refreshMeter" class="refresh-meter" aria-hidden="true"></div>
+        <label class="inline-control">
+          <select id="intervalSelect">
+            <option value="5">5 sn</option>
+            <option value="15" selected>15 sn</option>
+            <option value="30">30 sn</option>
+            <option value="60">1 dk</option>
+            <option value="300">5 dk</option>
+            <option value="900">15 dk</option>
+            <option value="1800">30 dk</option>
+            <option value="3600">1 sa</option>
+          </select>
+        </label>
+      </div>
 
-      <div class="topbar-actions">
-        <button id="addTabBtn" class="btn primary">
-          <span class="icon-wrap" data-icon="plus"></span>
-          <span>Yeni Sekme</span>
+      <div class="locale-switch" role="group" aria-label="Dil seçimi">
+        <button type="button" class="locale-btn" data-locale="tr">
+          <span class="locale-code">TR</span>
+        </button>
+        <button type="button" class="locale-btn" data-locale="en">
+          <span class="locale-code">EN</span>
         </button>
       </div>
     </header>
@@ -40,20 +48,20 @@
         <h2 id="tabDialogTitle">Yeni Sekme</h2>
 
         <label>
-          Sekme başlığı
+          <span id="tabTitleLabel">Sekme başlığı</span>
           <input required id="tabTitle" maxlength="40" placeholder="Örn: Finans" />
         </label>
 
         <label>
-          Dil
+          <span id="tabLanguageLabel">Dil</span>
           <select id="tabLanguage">
-            <option value="tr">Türkçe</option>
-            <option value="en">İngilizce</option>
+            <option value="tr">🇹🇷</option>
+            <option value="en">EN</option>
           </select>
         </label>
 
         <label>
-          Haber tazeliği
+          <span id="tabFreshnessLabel">Haber tazeliği</span>
           <select id="tabFreshness">
             <option value="1h" selected>1 saat</option>
             <option value="3h">3 saat</option>
@@ -74,8 +82,8 @@
       <div class="dialog-content compact-content">
         <p id="deleteConfirmText">Silinsin mi?</p>
         <div class="actions compact-actions">
-          <button type="button" class="btn" id="deleteNoBtn">No</button>
-          <button type="button" class="btn primary" id="deleteCheckBtn">Check</button>
+          <button type="button" class="btn" id="deleteNoBtn">Hayır</button>
+          <button type="button" class="btn primary" id="deleteCheckBtn">Sil</button>
         </div>
       </div>
     </dialog>
@@ -90,7 +98,6 @@
                 <input class="tab-title-input" maxlength="80" />
               </div>
               <div class="tab-header-actions">
-                <div class="tab-status"></div>
                 <button class="icon-btn move-left-btn" type="button" title="Sola taşı">
                   <span class="icon-wrap" data-icon="arrow-left"></span>
                 </button>
@@ -101,9 +108,6 @@
                   <span class="icon-wrap" data-icon="close"></span>
                 </button>
               </div>
-            </div>
-            <div class="tab-meta-row">
-              <span class="state-pill state-query"></span>
             </div>
             <div class="tab-control-row">
               <button class="control-btn lang-btn" type="button"></button>
@@ -117,6 +121,7 @@
                   <button class="freshness-option" type="button" data-freshness="1d">Bugün</button>
                 </div>
               </div>
+              <div class="tab-status" aria-live="polite"></div>
               <button class="control-btn sort-btn" type="button"></button>
             </div>
           </div>
@@ -124,21 +129,6 @@
         <ul class="news-list"></ul>
       </article>
     </template>
-
-    <svg aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
-      <symbol id="icon-plus" viewBox="0 0 24 24">
-        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </symbol>
-      <symbol id="icon-arrow-left" viewBox="0 0 24 24">
-        <path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </symbol>
-      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
-        <path d="M10 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </symbol>
-      <symbol id="icon-close" viewBox="0 0 24 24">
-        <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </symbol>
-    </svg>
 
     <script src="app.js"></script>
   </body>
