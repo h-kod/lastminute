@@ -29,6 +29,8 @@ const refreshTokens = new Map();
 const autoSearchTimers = new Map();
 const lastAutoSearchLengths = new Map();
 
+let locale = detectLocale();
+
 const ICON_URLS = {
   plus: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus-lg.svg",
   arrowLeft: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/arrow-left.svg",
@@ -193,8 +195,6 @@ function detectLocale() {
   if (stored) return normalizeLocale(stored);
   return normalizeLocale(navigator.language || navigator.userLanguage || "en");
 }
-
-let locale = detectLocale();
 
 function t(key, vars = {}, targetLocale = locale) {
   const dictionary = I18N[targetLocale] || I18N.en;
