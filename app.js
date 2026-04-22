@@ -632,7 +632,8 @@ function getFeedUrl(tab) {
   const langCode = tab.lang === "tr" ? "tr" : "en-US";
   const regionCode = resolveRegion(tab);
   const ceidLang = tab.lang === "tr" ? "tr" : "en";
-  const query = String(tab.query || "").trim() || (tab.lang === "tr" ? "haber" : "news");
+  const queryParts = [String(tab.query || "").trim(), `when:${tab.freshness || DEFAULT_FRESHNESS}`].filter(Boolean);
+  const query = queryParts.join(" ") || (tab.lang === "tr" ? "haber" : "news");
 
   return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${langCode}&gl=${regionCode}&ceid=${encodeURIComponent(`${regionCode}:${ceidLang}`)}`;
 }
