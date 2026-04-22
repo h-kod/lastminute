@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lastminute — Haber Takip Panosu</title>
+    <title>Lastminute - Haber Takip Panosu</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -13,16 +13,21 @@
         <p>Google News RSS ile TweetDeck tarzı çoklu haber takip uygulaması</p>
       </div>
 
-      <div class="refresh-controls" role="group" aria-label="Otomatik yenileme">
-        <button class="interval-btn" data-seconds="5">5 sn</button>
-        <button class="interval-btn active" data-seconds="15">15 sn</button>
-        <button class="interval-btn" data-seconds="30">30 sn</button>
-        <button class="interval-btn" data-seconds="60">60 sn</button>
-      </div>
+      <label class="inline-control">
+        <span>Aralık</span>
+        <select id="intervalSelect">
+          <option value="5">5 sn</option>
+          <option value="15" selected>15 sn</option>
+          <option value="30">30 sn</option>
+          <option value="60">60 sn</option>
+        </select>
+      </label>
 
       <div class="topbar-actions">
-        <button id="addTabBtn" class="btn primary">+ Sekme Ekle</button>
-        <button id="manageBtn" class="btn">Sekme Yönet</button>
+        <button id="addTabBtn" class="btn primary">
+          <span class="icon-wrap" data-icon="plus"></span>
+          <span>Yeni Sekme</span>
+        </button>
       </div>
     </header>
 
@@ -40,15 +45,6 @@
         </label>
 
         <label>
-          Bölge
-          <select id="tabRegion">
-            <option value="TR">Türkiye</option>
-            <option value="US">ABD</option>
-            <option value="GLOBAL">Global</option>
-          </select>
-        </label>
-
-        <label>
           Dil
           <select id="tabLanguage">
             <option value="tr">Türkçe</option>
@@ -57,8 +53,14 @@
         </label>
 
         <label>
-          Arama terimi (boşsa gündem)
-          <input id="tabQuery" maxlength="80" placeholder="Örn: yapay zeka" />
+          Haber tazeliği
+          <select id="tabFreshness">
+            <option value="1h" selected>1 saat</option>
+            <option value="3h">3 saat</option>
+            <option value="5h">5 saat</option>
+            <option value="10h">10 saat</option>
+            <option value="1d">Bugün</option>
+          </select>
         </label>
 
         <div class="actions">
@@ -68,41 +70,75 @@
       </form>
     </dialog>
 
-    <dialog id="manageDialog" class="dialog wide-dialog">
-      <section class="dialog-content">
-        <div class="manage-header">
-          <h2>Sekme Yönetimi</h2>
-          <button id="closeManageBtn" class="icon-btn close-btn" title="Kapat" aria-label="Kapat">✕</button>
+    <dialog id="deleteConfirmDialog" class="dialog compact-dialog">
+      <div class="dialog-content compact-content">
+        <p id="deleteConfirmText">Silinsin mi?</p>
+        <div class="actions compact-actions">
+          <button type="button" class="btn" id="deleteNoBtn">No</button>
+          <button type="button" class="btn primary" id="deleteCheckBtn">Check</button>
         </div>
-
-        <div class="manage-toolbar">
-          <label class="checkbox">
-            <input type="checkbox" id="hideRead" />
-            Okunan haberleri gizle
-          </label>
-          <button id="refreshAllBtn" class="btn">Tümünü Şimdi Yenile</button>
-        </div>
-
-        <div id="manageList" class="manage-list"></div>
-      </section>
+      </div>
     </dialog>
 
     <template id="tabTemplate">
       <article class="tab-column">
         <header class="tab-header">
-          <div>
-            <h3 class="tab-title"></h3>
-            <small class="tab-meta"></small>
-          </div>
-          <div class="tab-actions">
-            <button class="icon-btn sort-btn" title="Zamana göre sırala">⏱</button>
-            <button class="icon-btn edit-btn" title="Sekmeyi düzenle">✎</button>
-            <button class="icon-btn refresh-btn" title="Yenile">↻</button>
+          <div class="tab-header-copy">
+            <div class="tab-header-top">
+              <div class="tab-title-shell">
+                <span class="tab-signal"></span>
+                <input class="tab-title-input" maxlength="80" />
+              </div>
+              <div class="tab-header-actions">
+                <div class="tab-status"></div>
+                <button class="icon-btn move-left-btn" type="button" title="Sola taşı">
+                  <span class="icon-wrap" data-icon="arrow-left"></span>
+                </button>
+                <button class="icon-btn move-right-btn" type="button" title="Sağa taşı">
+                  <span class="icon-wrap" data-icon="arrow-right"></span>
+                </button>
+                <button class="icon-btn danger delete-btn" type="button" title="Sil">
+                  <span class="icon-wrap" data-icon="close"></span>
+                </button>
+              </div>
+            </div>
+            <div class="tab-meta-row">
+              <span class="state-pill state-query"></span>
+            </div>
+            <div class="tab-control-row">
+              <button class="control-btn lang-btn" type="button"></button>
+              <div class="freshness-group">
+                <button class="control-btn freshness-btn" type="button"></button>
+                <div class="freshness-menu">
+                  <button class="freshness-option" type="button" data-freshness="1h">Son 1 saat</button>
+                  <button class="freshness-option" type="button" data-freshness="3h">Son 3 saat</button>
+                  <button class="freshness-option" type="button" data-freshness="5h">Son 5 saat</button>
+                  <button class="freshness-option" type="button" data-freshness="10h">Son 10 saat</button>
+                  <button class="freshness-option" type="button" data-freshness="1d">Bugün</button>
+                </div>
+              </div>
+              <button class="control-btn sort-btn" type="button"></button>
+            </div>
           </div>
         </header>
         <ul class="news-list"></ul>
       </article>
     </template>
+
+    <svg aria-hidden="true" class="icon-sprite" xmlns="http://www.w3.org/2000/svg">
+      <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </symbol>
+      <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+        <path d="M14 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+        <path d="M10 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </symbol>
+      <symbol id="icon-close" viewBox="0 0 24 24">
+        <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </symbol>
+    </svg>
 
     <script src="app.js"></script>
   </body>
