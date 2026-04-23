@@ -122,7 +122,7 @@ main {
 .locale-switch {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   justify-self: end;
 }
 
@@ -1087,7 +1087,7 @@ select {
 .refresh-control {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   justify-self: end;
 }
 

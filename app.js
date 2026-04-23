@@ -145,55 +145,55 @@ const ICON_URLS = {
 const I18N = {
   tr: {
     appTitle: "Lastminute - Haber Takibi",
-    appSubtitle: "Arama kelimelerine göre güncel haberleri yan yana takip et.",
-    intervalLabel: "Yenileme aralığı",
+    appSubtitle: "Arama terimlerine göre haberleri ve trendleri yan yana takip et.",
     localeGroupLabel: "Dil seçimi",
     languageTurkish: "Türkçe",
     languageEnglish: "İngilizce",
     dialogNewTab: "Yeni arama",
     dialogEditTab: "Aramayı düzenle",
-    tabTitleLabel: "Arama kelimesi",
+    tabTitleLabel: "Arama başlığı",
     tabTitlePlaceholder: "Örn: ekonomi",
     searchInputPlaceholder: "Arama yaz",
-    tabLanguageLabel: "Haber dili",
-    tabFreshnessLabel: "Zaman aralığı",
+    tabLanguageLabel: "Arama dili",
+    tabFreshnessLabel: "Haber süresi",
     cancel: "Vazgeç",
     save: "Kaydet",
     deleteNo: "Hayır",
     deleteYes: "Sil",
     deleteConfirm: "Silmek için tekrar tıkla",
-    deleteQuestion: "Silinsin mi?",
+    deleteQuestion: "Arama silinsin mi?",
     deleteTabQuestion: '"{title}" silinsin mi?',
     emptySlotTitle: "Yeni arama",
     emptySlotDescription: "Yeni bir arama sütunu aç.",
-    addTab: "Arama ekle",
-    trendsSlotTitle: "Trend aramaları",
+    addTab: "Yeni arama",
+    trendsSlotTitle: "Trendler",
     trendsSlotDescription: "Google Trends'te öne çıkan aramalardan birini seç.",
-    trendsGeoSwitch: "Trend ülkesini değiştir",
-    trendsLoading: "Trendler yükleniyor...",
-    trendsEmpty: "Trend bulunamadı.",
+    trendsCountryLabel: "Ülke seç",
+    trendsCountrySelection: "Trend ülkesini seç",
+    trendsLoading: "Trendler getiriliyor...",
+    trendsEmpty: "Bu ülke için trend bulunamadı.",
     moveLeft: "Sola taşı",
     moveRight: "Sağa taşı",
-    delete: "Aramayı sil",
+    delete: "Aramayı kaldır",
     general: "Genel",
     sortNewest: "En yeni üstte",
     sortOldest: "En eski üstte",
-    loading: "Haberler yükleniyor...",
-    noNews: "Bu arama için haber bulunamadı.",
-    errorPrefix: "Yükleme sorunu:",
+    loading: "Haberler getiriliyor...",
+    noNews: "Bu arama için sonuç bulunamadı.",
+    errorPrefix: "Yükleme hatası:",
     statusError: "sorun",
     pending: "hazırlanıyor",
     shortQueryStatus: "3+",
-    shortQueryHint: "Haberleri görmek için en az 3 harf yaz.",
-    newsCount: "{count} haber",
-    fetchedAt: "Otomatik yenileme: {value} sonra",
-    refreshed: "Az önce yenilendi",
-    noFeed: "Haber akışı okunamadı",
-    invalidFeedUrl: "Haber akışı adresi geçersiz",
-    proxyUnavailable: "Haber servisine ulaşılamadı: {base} ({status})",
-    rssEmpty: "Haber akışı boş döndü: {base}",
-    newsUnavailable: "Haberler şu anda yüklenemiyor",
-    maxTabsReached: "En fazla {count} arama ekleyebilirsin.",
+    shortQueryHint: "Sonuçları görmek için en az 3 harf yaz.",
+    newsCount: "{count} sonuç",
+    fetchedAt: "Sonraki otomatik yenileme: {value}",
+    refreshed: "Az önce güncellendi",
+    noFeed: "Akış okunamadı",
+    invalidFeedUrl: "Akış adresi geçersiz",
+    proxyUnavailable: "Servise ulaşılamadı: {base} ({status})",
+    rssEmpty: "Akış boş döndü: {base}",
+    newsUnavailable: "Sonuçlar şu anda yüklenemiyor",
+    maxTabsReached: "En fazla {count} arama sekmesi ekleyebilirsin.",
     intervalOptions: {
       5: "5 sn",
       15: "15 sn",
@@ -227,18 +227,17 @@ const I18N = {
   },
   en: {
     appTitle: "Lastminute - News Tracker",
-    appSubtitle: "Track current news side by side by search term.",
-    intervalLabel: "Refresh interval",
+    appSubtitle: "Track news and trends side by side by search term.",
     localeGroupLabel: "Language selection",
     languageTurkish: "Turkish",
     languageEnglish: "English",
     dialogNewTab: "New search",
     dialogEditTab: "Edit search",
-    tabTitleLabel: "Search term",
+    tabTitleLabel: "Search title",
     tabTitlePlaceholder: "Example: economy",
     searchInputPlaceholder: "Type a search",
-    tabLanguageLabel: "News language",
-    tabFreshnessLabel: "Time range",
+    tabLanguageLabel: "Search language",
+    tabFreshnessLabel: "News window",
     cancel: "Cancel",
     save: "Save",
     deleteNo: "No",
@@ -248,34 +247,35 @@ const I18N = {
     deleteTabQuestion: 'Delete "{title}"?',
     emptySlotTitle: "New search",
     emptySlotDescription: "Open a new search column.",
-    addTab: "Add search",
-    trendsSlotTitle: "Trending searches",
-    trendsSlotDescription: "Pick one of the Google Trends leaders.",
-    trendsGeoSwitch: "Switch trend country",
+    addTab: "New search",
+    trendsSlotTitle: "Trends",
+    trendsSlotDescription: "Pick one of the searches trending on Google Trends.",
+    trendsCountryLabel: "Choose country",
+    trendsCountrySelection: "Choose the trend country",
     trendsLoading: "Loading trends...",
-    trendsEmpty: "No trends found.",
+    trendsEmpty: "No trends found for this country.",
     moveLeft: "Move left",
     moveRight: "Move right",
-    delete: "Delete search",
+    delete: "Remove search",
     general: "General",
     sortNewest: "Newest on top",
     sortOldest: "Oldest on top",
     loading: "Loading news...",
-    noNews: "No news found for this search.",
-    errorPrefix: "Loading issue:",
+    noNews: "No results found for this search.",
+    errorPrefix: "Load error:",
     statusError: "issue",
     pending: "starting",
     shortQueryStatus: "3+",
-    shortQueryHint: "Type at least 3 characters to load news.",
-    newsCount: "{count} items",
-    fetchedAt: "Auto refresh in {value}",
+    shortQueryHint: "Type at least 3 characters to see results.",
+    newsCount: "{count} results",
+    fetchedAt: "Next auto-refresh in {value}",
     refreshed: "Just updated",
-    noFeed: "The news feed could not be read",
-    invalidFeedUrl: "The news feed address is invalid",
-    proxyUnavailable: "The news service is unavailable: {base} ({status})",
-    rssEmpty: "The news feed returned empty: {base}",
-    newsUnavailable: "News cannot be loaded right now",
-    maxTabsReached: "You can add up to {count} searches.",
+    noFeed: "Could not read the feed",
+    invalidFeedUrl: "The feed address is invalid",
+    proxyUnavailable: "The service is unavailable: {base} ({status})",
+    rssEmpty: "The feed returned empty: {base}",
+    newsUnavailable: "Results cannot be loaded right now",
+    maxTabsReached: "You can add up to {count} search tabs.",
     intervalOptions: {
       5: "5 sec",
       15: "15 sec",
@@ -514,9 +514,7 @@ function renderLocalizedStaticTexts() {
   document.title = t("appTitle");
 
   const subtitle = document.getElementById("appSubtitle");
-  const intervalLabel = document.getElementById("intervalLabel");
   if (subtitle) subtitle.textContent = t("appSubtitle");
-  if (intervalLabel) intervalLabel.textContent = t("intervalLabel");
 
   const localeGroup = document.querySelector(".locale-switch");
   const localeButtons = document.querySelectorAll(".locale-btn");
@@ -572,10 +570,10 @@ function renderLocalizedStaticTexts() {
     node.textContent = t("trendsSlotDescription");
   });
   document.querySelectorAll(".trends-country-label").forEach((node) => {
-    node.textContent = locale === "tr" ? "G20 Ülkeleri" : "G20 Countries";
+    node.textContent = t("trendsCountryLabel");
   });
   document.querySelectorAll(".trends-country-bar").forEach((node) => {
-    node.setAttribute("aria-label", locale === "tr" ? "G20 ülke seçimi" : "G20 country selection");
+    node.setAttribute("aria-label", t("trendsCountrySelection"));
   });
   document.querySelectorAll(".empty-slot-description").forEach((node) => {
     node.textContent = t("emptySlotDescription");
@@ -1403,10 +1401,10 @@ function createEmptySlot(primary = false) {
       </div>
       <div class="trends-panel">
         <div class="trends-panel-head">
-          <span class="trends-country-label">${locale === "tr" ? "G20 Ülkeleri" : "G20 Countries"}</span>
+          <span class="trends-country-label">${t("trendsCountryLabel")}</span>
           <span class="trends-status" data-loading="true">${t("trendsLoading")}</span>
         </div>
-        <div class="trends-country-bar" aria-label="${locale === "tr" ? "G20 ülke seçimi" : "G20 country selection"}"></div>
+        <div class="trends-country-bar" aria-label="${t("trendsCountrySelection")}"></div>
         <ul class="trends-list" aria-live="polite"></ul>
       </div>
     </div>

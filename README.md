@@ -2,7 +2,7 @@
 
 ![Lastminute screenshot](images/screenshot.jpeg)
 
-Lastminute is a compact multi-tab news dashboard built on top of Google News RSS. It lets you track multiple topics side by side, switch languages, change freshness windows, and keep the interface fast and focused.
+Lastminute is a compact multi-tab news dashboard built on top of Google News RSS. It lets you track multiple topics side by side, switch languages, adjust freshness, and keep the interface fast and focused.
 
 ## Features
 
@@ -13,7 +13,7 @@ Lastminute is a compact multi-tab news dashboard built on top of Google News RSS
 - Google News freshness filters from `1h` to `1d`.
 - Auto-refresh intervals from `5s` to `1h`.
 - Read-state tracking for news items.
-- Google Trends suggestions in the rightmost panel, sorted by search volume.
+- Google Trends suggestions in the right panel, grouped by country and ready to open as searches.
 - English and Turkish localization with browser-language defaults.
 - Netlify-ready RSS proxy via `/api/feed`.
 - Netlify-ready Google Trends proxy via `/api/trends`.
