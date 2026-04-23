@@ -6,3 +6,8 @@
   from = "/api/feed"
   to = "/.netlify/functions/feed"
   status = 200
+
+[[redirects]]
+  from = "/api/trends"
+  to = "/.netlify/functions/trends"
+  status = 200

@@ -42,8 +42,12 @@ function serveFile(res, filePath) {
   });
 }
 
-async function proxyFeed(url, res) {
-  if (!url || !url.startsWith("https://news.google.com/rss/")) {
+const TREND_GEO_ALIASES = {
+  CN: "HK"
+};
+
+async function proxyGoogleFeed(url, allowedPrefix, res) {
+  if (!url || !url.startsWith(allowedPrefix)) {
     send(res, 400, JSON.stringify({ error: "Invalid feed url" }), {
       "Content-Type": "application/json; charset=utf-8"
     });
@@ -74,6 +78,24 @@ async function proxyFeed(url, res) {
   }
 }
 
+async function proxyNewsFeed(url, res) {
+  return proxyGoogleFeed(url, "https://news.google.com/rss/", res);
+}
+
+async function proxyTrendsFeed(geo, res) {
+  const normalizedGeo = String(geo || "US").trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(normalizedGeo)) {
+    send(res, 400, JSON.stringify({ error: "Invalid geo" }), {
+      "Content-Type": "application/json; charset=utf-8"
+    });
+    return;
+  }
+
+  const requestGeo = TREND_GEO_ALIASES[normalizedGeo] || normalizedGeo;
+  const url = `https://trends.google.com/trending/rss?geo=${encodeURIComponent(requestGeo)}`;
+  return proxyGoogleFeed(url, "https://trends.google.com/trending/rss?", res);
+}
+
 http
   .createServer((req, res) => {
     const requestUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -84,7 +106,12 @@ http
     }
 
     if (requestUrl.pathname === "/api/feed") {
-      proxyFeed(requestUrl.searchParams.get("url"), res);
+      proxyNewsFeed(requestUrl.searchParams.get("url"), res);
+      return;
+    }
+
+    if (requestUrl.pathname === "/api/trends") {
+      proxyTrendsFeed(requestUrl.searchParams.get("geo"), res);
       return;
     }
 

@@ -2,7 +2,9 @@ const MAX_TABS = 10;
 const DEFAULT_INTERVAL = 15;
 const DEFAULT_FRESHNESS = "1h";
 const FEED_PROXY_PATH = "/api/feed";
+const TRENDS_PROXY_PATH = "/api/trends";
 const LOCALE_STORAGE_KEY = "lastminute_locale";
+const TREND_GEO_STORAGE_KEY = "lastminute_trends_geo";
 const SUPPORTED_LOCALES = ["tr", "en"];
 
 function normalizeLocale(value) {
@@ -17,18 +19,100 @@ function detectLocale() {
 
 let locale = detectLocale();
 
+const G20_TRENDS = [
+  { code: "AR", en: "Argentina", tr: "Arjantin" },
+  { code: "AU", en: "Australia", tr: "Avustralya" },
+  { code: "BR", en: "Brazil", tr: "Brezilya" },
+  { code: "CA", en: "Canada", tr: "Kanada" },
+  { code: "CN", en: "China", tr: "Çin" },
+  { code: "FR", en: "France", tr: "Fransa" },
+  { code: "DE", en: "Germany", tr: "Almanya" },
+  { code: "IN", en: "India", tr: "Hindistan" },
+  { code: "ID", en: "Indonesia", tr: "Endonezya" },
+  { code: "IT", en: "Italy", tr: "İtalya" },
+  { code: "JP", en: "Japan", tr: "Japonya" },
+  { code: "MX", en: "Mexico", tr: "Meksika" },
+  { code: "RU", en: "Russia", tr: "Rusya" },
+  { code: "SA", en: "Saudi Arabia", tr: "Suudi Arabistan" },
+  { code: "ZA", en: "South Africa", tr: "Güney Afrika" },
+  { code: "KR", en: "South Korea", tr: "Güney Kore" },
+  { code: "TR", en: "Türkiye", tr: "Türkiye" },
+  { code: "GB", en: "United Kingdom", tr: "Birleşik Krallık" },
+  { code: "US", en: "United States", tr: "ABD" }
+];
+const G20_TREND_GEO_CODES = new Set(G20_TRENDS.map((item) => item.code));
+const TREND_GEO_ALIASES = {
+  CN: "HK"
+};
+const TREND_NEWS_HL_BY_GEO = {
+  AR: "es-AR",
+  AU: "en-AU",
+  BR: "pt-BR",
+  CA: "en-CA",
+  CN: "zh-CN",
+  FR: "fr-FR",
+  DE: "de-DE",
+  IN: "en-IN",
+  ID: "id-ID",
+  IT: "it-IT",
+  JP: "ja-JP",
+  MX: "es-MX",
+  RU: "ru-RU",
+  SA: "ar-SA",
+  ZA: "en-ZA",
+  KR: "ko-KR",
+  TR: "tr-TR",
+  GB: "en-GB",
+  US: "en-US",
+  HK: "zh-HK"
+};
+
+function normalizeTrendGeo(value) {
+  const code = String(value || "").trim().toUpperCase();
+  return G20_TREND_GEO_CODES.has(code) ? code : "US";
+}
+
+function resolveTrendGeoRequest(geo) {
+  const normalized = normalizeTrendGeo(geo);
+  return TREND_GEO_ALIASES[normalized] || normalized;
+}
+
+function loadTrendGeo() {
+  return normalizeTrendGeo(localStorage.getItem(TREND_GEO_STORAGE_KEY) || "US");
+}
+
+function getTrendCountryMeta(code) {
+  return G20_TRENDS.find((item) => item.code === normalizeTrendGeo(code)) || G20_TRENDS[G20_TRENDS.length - 1];
+}
+
+function getTrendCountryLabel(code, targetLocale = locale) {
+  const meta = getTrendCountryMeta(code);
+  return targetLocale === "tr" ? meta.tr : meta.en;
+}
+
+function getTrendNewsHl(code) {
+  const normalized = resolveTrendGeoRequest(code);
+  return TREND_NEWS_HL_BY_GEO[normalized] || "en-US";
+}
+
+const DEFAULT_TAB_KEYWORDS = {
+  global: "world",
+  economy: "economy",
+  tech: "technology"
+};
+
 const defaultTabs = [
-  { id: crypto.randomUUID(), title: "Global", region: "GLOBAL", lang: "en", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
-  { id: crypto.randomUUID(), title: "Türkiye", region: "TR", lang: "tr", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
-  { id: crypto.randomUUID(), title: "ABD", region: "US", lang: "en", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
-  { id: crypto.randomUUID(), title: "Trend 50", region: "GLOBAL", lang: "en", query: "top 50 trends", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" }
+  { id: crypto.randomUUID(), title: DEFAULT_TAB_KEYWORDS.global, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.global, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
+  { id: crypto.randomUUID(), title: DEFAULT_TAB_KEYWORDS.economy, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.economy, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" },
+  { id: crypto.randomUUID(), title: DEFAULT_TAB_KEYWORDS.tech, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.tech, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc" }
 ];
 
 let state = {
   tabs: loadTabs(),
   readSet: new Set(JSON.parse(localStorage.getItem("lastminute_read") || "[]")),
   intervalSec: Number(localStorage.getItem("lastminute_interval") || DEFAULT_INTERVAL),
-  editTabId: null
+  editTabId: null,
+  trendsGeo: loadTrendGeo()
 };
 
 let refreshTimer = null;
@@ -36,62 +120,80 @@ let refreshVisualFrameId = null;
 let refreshResumeTimer = null;
 let refreshCycleEndsAt = 0;
 let refreshMeterPhase = "countdown";
-let deleteTargetTabId = null;
+let pendingFocusTabId = null;
+const TAB_COLUMN_CAP = 5;
+const TAB_MIN_WIDTH = 390;
+const TAB_COLUMN_GAP = 10;
 
 const newsCache = new Map();
 const refreshTokens = new Map();
 const autoSearchTimers = new Map();
 const lastAutoSearchLengths = new Map();
+const trendsCache = new Map();
+const trendsTokens = new Map();
 
 const ICON_URLS = {
   plus: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/plus-lg.svg",
   arrowLeft: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/arrow-left.svg",
   arrowRight: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/arrow-right.svg",
   close: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/x-lg.svg",
+  check: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/check-lg.svg",
   sortNewest: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/sort-down-alt.svg",
   sortOldest: "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/icons/sort-up-alt.svg"
 };
 
 const I18N = {
   tr: {
-    appTitle: "Lastminute - Haber Takip Panosu",
-    appSubtitle: "Google News RSS ile TweetDeck tarzı çoklu haber takip uygulaması",
+    appTitle: "Lastminute - Haber Takibi",
+    appSubtitle: "Arama kelimelerine göre güncel haberleri yan yana takip et.",
+    intervalLabel: "Yenileme aralığı",
     localeGroupLabel: "Dil seçimi",
     languageTurkish: "Türkçe",
     languageEnglish: "İngilizce",
-    dialogNewTab: "Yeni Sekme",
-    dialogEditTab: "Sekme Düzenle",
-    tabTitleLabel: "Sekme başlığı",
-    tabTitlePlaceholder: "Anahtar kelime",
-    tabLanguageLabel: "Dil",
-    tabFreshnessLabel: "Haber tazeliği",
+    dialogNewTab: "Yeni arama",
+    dialogEditTab: "Aramayı düzenle",
+    tabTitleLabel: "Arama kelimesi",
+    tabTitlePlaceholder: "Örn: ekonomi",
+    searchInputPlaceholder: "Arama yaz",
+    tabLanguageLabel: "Haber dili",
+    tabFreshnessLabel: "Zaman aralığı",
     cancel: "Vazgeç",
     save: "Kaydet",
     deleteNo: "Hayır",
     deleteYes: "Sil",
+    deleteConfirm: "Silmek için tekrar tıkla",
     deleteQuestion: "Silinsin mi?",
     deleteTabQuestion: '"{title}" silinsin mi?',
-    emptySlotTitle: "Sekme ekle",
-    emptySlotDescription: "Yeni bir sekme eklemek için tıkla.",
-    addTab: "Sekme Ekle",
+    emptySlotTitle: "Yeni arama",
+    emptySlotDescription: "Yeni bir arama sütunu aç.",
+    addTab: "Arama ekle",
+    trendsSlotTitle: "Trend aramaları",
+    trendsSlotDescription: "Google Trends'te öne çıkan aramalardan birini seç.",
+    trendsGeoSwitch: "Trend ülkesini değiştir",
+    trendsLoading: "Trendler yükleniyor...",
+    trendsEmpty: "Trend bulunamadı.",
     moveLeft: "Sola taşı",
     moveRight: "Sağa taşı",
-    delete: "Sil",
+    delete: "Aramayı sil",
     general: "Genel",
-    sortNewest: "Yeni önce",
-    sortOldest: "Eski önce",
-    loading: "Yükleniyor...",
-    noNews: "Haber bulunamadı.",
-    errorPrefix: "Hata:",
-    pending: "bekleniyor",
+    sortNewest: "En yeni üstte",
+    sortOldest: "En eski üstte",
+    loading: "Haberler yükleniyor...",
+    noNews: "Bu arama için haber bulunamadı.",
+    errorPrefix: "Yükleme sorunu:",
+    statusError: "sorun",
+    pending: "hazırlanıyor",
+    shortQueryStatus: "3+",
+    shortQueryHint: "Haberleri görmek için en az 3 harf yaz.",
     newsCount: "{count} haber",
-    fetchedAt: "Sonraki yenileme: {value} içinde",
-    refreshed: "Yenilendi",
-    noFeed: "RSS ayrıştırılamadı",
-    invalidFeedUrl: "Geçersiz RSS adresi",
-    proxyUnavailable: "Proxy erişilemedi: {base} ({status})",
-    rssEmpty: "RSS boş döndü: {base}",
-    newsUnavailable: "Haberler alınamadı",
+    fetchedAt: "Otomatik yenileme: {value} sonra",
+    refreshed: "Az önce yenilendi",
+    noFeed: "Haber akışı okunamadı",
+    invalidFeedUrl: "Haber akışı adresi geçersiz",
+    proxyUnavailable: "Haber servisine ulaşılamadı: {base} ({status})",
+    rssEmpty: "Haber akışı boş döndü: {base}",
+    newsUnavailable: "Haberler şu anda yüklenemiyor",
+    maxTabsReached: "En fazla {count} arama ekleyebilirsin.",
     intervalOptions: {
       5: "5 sn",
       15: "15 sn",
@@ -124,44 +226,56 @@ const I18N = {
     }
   },
   en: {
-    appTitle: "Lastminute - News Dashboard",
-    appSubtitle: "A TweetDeck-style multi-news tracker powered by Google News RSS",
+    appTitle: "Lastminute - News Tracker",
+    appSubtitle: "Track current news side by side by search term.",
+    intervalLabel: "Refresh interval",
     localeGroupLabel: "Language selection",
     languageTurkish: "Turkish",
     languageEnglish: "English",
-    dialogNewTab: "New Tab",
-    dialogEditTab: "Edit Tab",
-    tabTitleLabel: "Tab title",
-    tabTitlePlaceholder: "Keyword",
-    tabLanguageLabel: "Language",
-    tabFreshnessLabel: "News freshness",
+    dialogNewTab: "New search",
+    dialogEditTab: "Edit search",
+    tabTitleLabel: "Search term",
+    tabTitlePlaceholder: "Example: economy",
+    searchInputPlaceholder: "Type a search",
+    tabLanguageLabel: "News language",
+    tabFreshnessLabel: "Time range",
     cancel: "Cancel",
     save: "Save",
     deleteNo: "No",
     deleteYes: "Delete",
+    deleteConfirm: "Click again to delete",
     deleteQuestion: "Delete it?",
     deleteTabQuestion: 'Delete "{title}"?',
-    emptySlotTitle: "Add tab",
-    emptySlotDescription: "Click to add a new tab.",
-    addTab: "Add Tab",
+    emptySlotTitle: "New search",
+    emptySlotDescription: "Open a new search column.",
+    addTab: "Add search",
+    trendsSlotTitle: "Trending searches",
+    trendsSlotDescription: "Pick one of the Google Trends leaders.",
+    trendsGeoSwitch: "Switch trend country",
+    trendsLoading: "Loading trends...",
+    trendsEmpty: "No trends found.",
     moveLeft: "Move left",
     moveRight: "Move right",
-    delete: "Delete",
+    delete: "Delete search",
     general: "General",
-    sortNewest: "Newest first",
-    sortOldest: "Oldest first",
-    loading: "Loading...",
-    noNews: "No news found.",
-    errorPrefix: "Error:",
-    pending: "pending",
+    sortNewest: "Newest on top",
+    sortOldest: "Oldest on top",
+    loading: "Loading news...",
+    noNews: "No news found for this search.",
+    errorPrefix: "Loading issue:",
+    statusError: "issue",
+    pending: "starting",
+    shortQueryStatus: "3+",
+    shortQueryHint: "Type at least 3 characters to load news.",
     newsCount: "{count} items",
-    fetchedAt: "Next refresh in {value}",
-    refreshed: "Updated",
-    noFeed: "RSS could not be parsed",
-    invalidFeedUrl: "Invalid RSS URL",
-    proxyUnavailable: "Proxy unavailable: {base} ({status})",
-    rssEmpty: "RSS returned empty: {base}",
-    newsUnavailable: "News could not be loaded",
+    fetchedAt: "Auto refresh in {value}",
+    refreshed: "Just updated",
+    noFeed: "The news feed could not be read",
+    invalidFeedUrl: "The news feed address is invalid",
+    proxyUnavailable: "The news service is unavailable: {base} ({status})",
+    rssEmpty: "The news feed returned empty: {base}",
+    newsUnavailable: "News cannot be loaded right now",
+    maxTabsReached: "You can add up to {count} searches.",
     intervalOptions: {
       5: "5 sec",
       15: "15 sec",
@@ -217,19 +331,17 @@ function getLanguageCode(lang) {
 function getDefaultTabTitle(key, targetLocale = locale) {
   const titles = {
     tab_global: targetLocale === "tr" ? "Global" : "Global",
-    tab_turkiye: targetLocale === "tr" ? "Türkiye" : "Turkey",
-    tab_usa: targetLocale === "tr" ? "ABD" : "USA",
-    tab_trends: targetLocale === "tr" ? "Trend 50" : "Top 50 Trends"
+    tab_economy: targetLocale === "tr" ? "Ekonomi" : "Economy",
+    tab_tech: targetLocale === "tr" ? "Teknoloji" : "Technology"
   };
   return titles[key] || (targetLocale === "tr" ? "Genel" : "General");
 }
 
 function createDefaultTabs(targetLocale = locale) {
   return [
-    { id: crypto.randomUUID(), defaultTitleKey: "tab_global", title: getDefaultTabTitle("tab_global", targetLocale), region: "GLOBAL", lang: "en", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false },
-    { id: crypto.randomUUID(), defaultTitleKey: "tab_turkiye", title: targetLocale === "tr" ? "Türkiye" : "Turkey", region: "TR", lang: "tr", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false },
-    { id: crypto.randomUUID(), defaultTitleKey: "tab_usa", title: getDefaultTabTitle("tab_usa", targetLocale), region: "US", lang: "en", query: "", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false },
-    { id: crypto.randomUUID(), defaultTitleKey: "tab_trends", title: getDefaultTabTitle("tab_trends", targetLocale), region: "GLOBAL", lang: "en", query: "top 50 trends", freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false }
+    { id: crypto.randomUUID(), defaultTitleKey: "tab_global", title: DEFAULT_TAB_KEYWORDS.global, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.global, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false },
+    { id: crypto.randomUUID(), defaultTitleKey: "tab_economy", title: DEFAULT_TAB_KEYWORDS.economy, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.economy, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false },
+    { id: crypto.randomUUID(), defaultTitleKey: "tab_tech", title: DEFAULT_TAB_KEYWORDS.tech, region: "GLOBAL", lang: "en", query: DEFAULT_TAB_KEYWORDS.tech, freshness: DEFAULT_FRESHNESS, sortMode: "time_desc", customTitle: false }
   ];
 }
 
@@ -238,25 +350,10 @@ const tabTemplate = document.getElementById("tabTemplate");
 const tabDialog = document.getElementById("tabDialog");
 const tabForm = document.getElementById("tabForm");
 const tabDialogTitle = document.getElementById("tabDialogTitle");
-const deleteConfirmDialog = document.getElementById("deleteConfirmDialog");
-const deleteConfirmText = document.getElementById("deleteConfirmText");
 const intervalSelect = document.getElementById("intervalSelect");
 const refreshMeter = document.getElementById("refreshMeter");
 
 document.getElementById("cancelTabBtn").addEventListener("click", () => tabDialog.close());
-document.getElementById("deleteNoBtn").addEventListener("click", () => {
-  deleteTargetTabId = null;
-  deleteConfirmDialog.close();
-});
-document.getElementById("deleteCheckBtn").addEventListener("click", () => {
-  if (!deleteTargetTabId) return;
-  state.tabs = state.tabs.filter((tab) => tab.id !== deleteTargetTabId);
-  newsCache.delete(deleteTargetTabId);
-  persistTabs();
-  deleteTargetTabId = null;
-  deleteConfirmDialog.close();
-  renderAll();
-});
 
 intervalSelect.addEventListener("change", () => {
   state.intervalSec = Number(intervalSelect.value);
@@ -287,7 +384,8 @@ tabForm.addEventListener("submit", (e) => {
     query: titleValue,
     freshness: document.getElementById("tabFreshness").value,
     region: previousTab?.region || null,
-    customTitle: true
+    customTitle: true,
+    allowShortQueryFetch: false
   };
 
   if (state.editTabId) {
@@ -314,12 +412,34 @@ function loadTabs() {
   try {
     const parsed = JSON.parse(raw);
     return parsed.length
-      ? parsed.slice(0, MAX_TABS).map((tab) => ({
-          ...tab,
-          freshness: tab.freshness || DEFAULT_FRESHNESS,
-          sortMode: tab.sortMode || "time_desc",
-          customTitle: Boolean(tab.customTitle)
-        }))
+      ? parsed.slice(0, MAX_TABS).map((tab) => {
+          const fallbackTitle =
+            tab.defaultTitleKey === "tab_global"
+              ? DEFAULT_TAB_KEYWORDS.global
+              : tab.defaultTitleKey === "tab_economy"
+                ? DEFAULT_TAB_KEYWORDS.economy
+                : tab.defaultTitleKey === "tab_tech"
+                  ? DEFAULT_TAB_KEYWORDS.tech
+                  : String(tab.title ?? tab.query ?? "").trim();
+          const unifiedText = String(fallbackTitle).trim();
+          const normalizedRegion = normalizeTrendGeo(tab.region || "US");
+          const isTrendTab = Boolean(tab.allowShortQueryFetch && tab.customTitle && G20_TREND_GEO_CODES.has(normalizedRegion));
+          const newsHl = isTrendTab ? getTrendNewsHl(normalizedRegion) : null;
+
+          return {
+            ...tab,
+            title: unifiedText,
+            query: unifiedText,
+            region: tab.region || (tab.lang === "tr" ? "TR" : "US"),
+            freshness: tab.freshness || DEFAULT_FRESHNESS,
+            sortMode: tab.sortMode || "time_desc",
+            customTitle: Boolean(tab.customTitle),
+            allowShortQueryFetch: Boolean(tab.allowShortQueryFetch),
+            feedMode: isTrendTab ? "trend" : tab.feedMode || null,
+            newsHl: newsHl || tab.newsHl || null,
+            lang: isTrendTab ? (newsHl && newsHl.startsWith("tr") ? "tr" : "en") : tab.lang || "en"
+          };
+        })
       : createDefaultTabs(locale);
   } catch {
     return createDefaultTabs(locale);
@@ -384,9 +504,6 @@ function setLocale(nextLocale) {
   locale = normalizeLocale(nextLocale);
   localStorage.setItem(LOCALE_STORAGE_KEY, locale);
   document.documentElement.lang = locale;
-  state.tabs = state.tabs.map((tab) =>
-    tab.defaultTitleKey && !tab.customTitle ? { ...tab, title: getDefaultTabTitle(tab.defaultTitleKey, locale) } : tab
-  );
   persistTabs();
   renderLocalizedStaticTexts();
   setIntervalButtonState();
@@ -397,7 +514,9 @@ function renderLocalizedStaticTexts() {
   document.title = t("appTitle");
 
   const subtitle = document.getElementById("appSubtitle");
+  const intervalLabel = document.getElementById("intervalLabel");
   if (subtitle) subtitle.textContent = t("appSubtitle");
+  if (intervalLabel) intervalLabel.textContent = t("intervalLabel");
 
   const localeGroup = document.querySelector(".locale-switch");
   const localeButtons = document.querySelectorAll(".locale-btn");
@@ -419,20 +538,14 @@ function renderLocalizedStaticTexts() {
   const tabFreshnessSelect = document.getElementById("tabFreshness");
   const cancelBtn = document.getElementById("cancelTabBtn");
   const saveBtn = tabForm.querySelector('button[type="submit"]');
-  const deleteConfirmText = document.getElementById("deleteConfirmText");
-  const deleteNoBtn = document.getElementById("deleteNoBtn");
-  const deleteCheckBtn = document.getElementById("deleteCheckBtn");
 
   if (tabDialogTitle) tabDialogTitle.textContent = state.editTabId ? t("dialogEditTab") : t("dialogNewTab");
   if (tabTitleLabel) tabTitleLabel.textContent = t("tabTitleLabel");
   if (tabLanguageLabel) tabLanguageLabel.textContent = t("tabLanguageLabel");
   if (tabFreshnessLabel) tabFreshnessLabel.textContent = t("tabFreshnessLabel");
-  if (tabTitleInput) tabTitleInput.placeholder = locale === "tr" ? "Anahtar kelime" : "Keyword";
+  if (tabTitleInput) tabTitleInput.placeholder = t("tabTitlePlaceholder");
   if (cancelBtn) cancelBtn.textContent = t("cancel");
   if (saveBtn) saveBtn.textContent = t("save");
-  if (deleteConfirmText) deleteConfirmText.textContent = t("deleteQuestion");
-  if (deleteNoBtn) deleteNoBtn.textContent = t("deleteNo");
-  if (deleteCheckBtn) deleteCheckBtn.textContent = t("deleteYes");
 
   if (tabLanguageSelect) {
     const trOption = tabLanguageSelect.querySelector('option[value="tr"]');
@@ -452,8 +565,23 @@ function renderLocalizedStaticTexts() {
     option.textContent = buildIntervalLabel(Number(option.value), locale);
   });
 
-  document.querySelectorAll(".empty-slot.primary strong").forEach((node) => {
-    node.textContent = t("emptySlotTitle");
+  document.querySelectorAll(".trends-slot-title").forEach((node) => {
+    node.textContent = t("trendsSlotTitle");
+  });
+  document.querySelectorAll(".trends-slot-description").forEach((node) => {
+    node.textContent = t("trendsSlotDescription");
+  });
+  document.querySelectorAll(".trends-country-label").forEach((node) => {
+    node.textContent = locale === "tr" ? "G20 Ülkeleri" : "G20 Countries";
+  });
+  document.querySelectorAll(".trends-country-bar").forEach((node) => {
+    node.setAttribute("aria-label", locale === "tr" ? "G20 ülke seçimi" : "G20 country selection");
+  });
+  document.querySelectorAll(".empty-slot-description").forEach((node) => {
+    node.textContent = t("emptySlotDescription");
+  });
+  document.querySelectorAll(".trends-status").forEach((node) => {
+    if (node.dataset.loading === "true") node.textContent = t("trendsLoading");
   });
   document.querySelectorAll(".empty-add-btn span:last-child").forEach((node) => {
     node.textContent = t("addTab");
@@ -465,8 +593,364 @@ function getTab(tabId) {
 }
 
 function updateTab(tabId, patch) {
-  state.tabs = state.tabs.map((tab) => (tab.id === tabId ? { ...tab, ...patch } : tab));
+  state.tabs = state.tabs.map((tab) => {
+    if (tab.id !== tabId) return tab;
+
+    const next = { ...tab, ...patch };
+    if (Object.prototype.hasOwnProperty.call(patch, "title") || Object.prototype.hasOwnProperty.call(patch, "query")) {
+      const unifiedValue = String(patch.title ?? patch.query ?? "").trim();
+      next.title = unifiedValue;
+      next.query = unifiedValue;
+    }
+
+    return next;
+  });
   persistTabs();
+}
+
+function createBlankTab() {
+  const lang = locale === "tr" ? "tr" : "en";
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    region: lang === "tr" ? "TR" : "US",
+    lang,
+    query: "",
+    freshness: DEFAULT_FRESHNESS,
+    sortMode: "time_desc",
+    customTitle: true,
+    allowShortQueryFetch: false
+  };
+}
+
+function getTrendGeo(targetGeo = state.trendsGeo) {
+  return normalizeTrendGeo(targetGeo);
+}
+
+function getTrendsFeedUrl(geo) {
+  return `${TRENDS_PROXY_PATH}?geo=${encodeURIComponent(resolveTrendGeoRequest(geo))}`;
+}
+
+function getTrendsCacheKey(geo) {
+  return `${normalizeTrendGeo(geo)}`;
+}
+
+function parseTrafficValue(raw) {
+  const numeric = Number(String(raw || "").replace(/[^\d]/g, ""));
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function textFromTags(node, tagNames) {
+  for (const tagName of tagNames) {
+    const el = node.getElementsByTagName(tagName)[0];
+    const value = el?.textContent?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function parseFlattenedTrendsFeed(rawText, geo = "US") {
+  const normalized = String(rawText || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const feedUrl = `https://trends.google.com/trending/rss?geo=${normalizeTrendGeo(geo)}`;
+  const datePattern = /^([A-Z][a-z]{2},\s+\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}\s+\d{2}:\d{2}:\d{2}\s+[+-]\d{4})\b/;
+  const isTitleToken = (token) => /^[a-z0-9][a-z0-9.'-]*$/.test(token) || token === "-";
+  const extractTailTitle = (chunk) => {
+    const tail = String(chunk || "").split("https://").pop().trim();
+    if (!tail) return "";
+
+    const withoutTraffic = tail.replace(/\s+\d[\d,]*\+\s*$/, "").trim();
+    if (!withoutTraffic) return "";
+
+    const tokens = withoutTraffic.split(/\s+/);
+    let start = tokens.length - 1;
+    while (start >= 0 && isTitleToken(tokens[start])) start -= 1;
+
+    const title = tokens.slice(start + 1).join(" ").trim();
+    return normalizeFeedText(title, 120);
+  };
+
+  const trends = [];
+  const parts = normalized.split(feedUrl);
+  for (let index = 1; index < parts.length - 1; index += 1) {
+    const titleChunk = String(parts[index] || "").trim();
+    const metaChunk = String(parts[index + 1] || "").trim();
+
+    const dateMatch = metaChunk.match(datePattern);
+    const title = extractTailTitle(titleChunk);
+    if (!title || !dateMatch) continue;
+
+    const trafficMatch = titleChunk.match(/\b(\d[\d,]*\+)\s*$/);
+    const trafficLabel = String(trafficMatch?.[1] || "").trim();
+    const started = new Date(dateMatch[1]);
+    const startedAt = Number.isFinite(started.getTime()) ? started.getTime() : 0;
+    if (!trafficLabel) continue;
+
+    trends.push({
+      title,
+      traffic: parseTrafficValue(trafficLabel),
+      trafficLabel,
+      started,
+      startedAt,
+      startedLabel: formatRelativeTime(started),
+      image: "",
+      source: "",
+      link: feedUrl,
+      description: ""
+    });
+  }
+
+  return trends;
+}
+
+function parseTrendsFeed(xmlText, geo = "US") {
+  const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const extractTagValue = (block, tagNames) => {
+    for (const tagName of tagNames) {
+      const pattern = new RegExp(`<${escapeRegExp(tagName)}[^>]*>([\\s\\S]*?)<\\/${escapeRegExp(tagName)}>`, "i");
+      const match = block.match(pattern);
+      if (match?.[1]) return match[1].trim();
+    }
+    return "";
+  };
+
+  const xml = String(xmlText || "");
+  const items = [...xml.matchAll(/<item>([\s\S]*?)<\/item>/gi)];
+  if (items.length) {
+    return items
+      .map((match) => {
+        const block = match[1];
+        const title = normalizeFeedText(extractTagValue(block, ["title"]), 120);
+        const trafficLabel = extractTagValue(block, ["ht:approx_traffic", "approx_traffic"]);
+        const traffic = parseTrafficValue(trafficLabel);
+        const started = new Date(extractTagValue(block, ["pubDate"]));
+        const startedAt = Number.isFinite(started.getTime()) ? started.getTime() : 0;
+        const image =
+          extractTagValue(block, ["ht:picture", "picture"]) ||
+          extractTagValue(block, ["ht:news_item_picture", "news_item_picture"]) ||
+          extractTagValue(block, ["media:content", "content"]) ||
+          extractTagValue(block, ["enclosure"]);
+        const source =
+          normalizeFeedText(
+            extractTagValue(block, ["ht:picture_source", "picture_source"]) ||
+              extractTagValue(block, ["ht:news_item_source", "news_item_source"]),
+            80
+          );
+        const link = extractTagValue(block, ["link"]);
+        const description = normalizeFeedText(extractTagValue(block, ["description"]), 280);
+        return {
+          title,
+          traffic,
+          trafficLabel: trafficLabel || "",
+          started,
+          startedAt,
+          startedLabel: formatRelativeTime(started),
+          image,
+          source,
+          link,
+          description
+        };
+      })
+      .filter((trend) => trend.title);
+  }
+
+  const flattened = parseFlattenedTrendsFeed(xml, geo);
+  if (flattened.length) return flattened;
+
+  throw new Error(t("noFeed"));
+}
+
+async function fetchTrends(geo) {
+  const normalizedGeo = getTrendGeo(geo);
+  const requestGeo = resolveTrendGeoRequest(normalizedGeo);
+  const feedUrl = getTrendsFeedUrl(requestGeo);
+
+  try {
+    const apiUrl = `${TRENDS_PROXY_PATH}?geo=${encodeURIComponent(requestGeo)}`;
+    const response = await fetch(apiUrl, { cache: "no-store" });
+    const xmlText = await response.text();
+    const looksLikeHtml = /<!doctype html>|<html[\s>]/i.test(xmlText);
+
+    if (!response.ok || looksLikeHtml || !xmlText.trim()) {
+      throw new Error(t("trendsEmpty"));
+    }
+
+    return { feedUrl, trends: parseTrendsFeed(xmlText, requestGeo) };
+  } catch (error) {
+    throw error || new Error(t("trendsEmpty"));
+  }
+}
+
+function createTrendTab(trend, geo) {
+  const normalizedGeo = getTrendGeo(geo);
+  const newsHl = getTrendNewsHl(normalizedGeo);
+  return {
+    id: crypto.randomUUID(),
+    title: String(trend?.title || "").trim(),
+    region: normalizedGeo,
+    lang: newsHl.startsWith("tr") ? "tr" : "en",
+    query: String(trend?.title || "").trim(),
+    freshness: "1d",
+    sortMode: "time_desc",
+    feedMode: "trend",
+    newsHl,
+    customTitle: true,
+    allowShortQueryFetch: true
+  };
+}
+
+function renderTrendCountryBar(node, selectedGeo) {
+  const bar = node.querySelector(".trends-country-bar");
+  if (!bar) return;
+
+  bar.replaceChildren(
+    ...G20_TRENDS.map((country) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `trends-country-btn${country.code === normalizeTrendGeo(selectedGeo) ? " active" : ""}`;
+      button.dataset.geo = country.code;
+      button.textContent = getTrendCountryLabel(country.code);
+      button.title = getTrendCountryLabel(country.code);
+      button.setAttribute("aria-pressed", String(country.code === normalizeTrendGeo(selectedGeo)));
+      return button;
+    })
+  );
+}
+
+function renderTrendsState(node, trends, geo, loading = false) {
+  const list = node.querySelector(".trends-list");
+  const status = node.querySelector(".trends-status");
+  const countryBar = node.querySelector(".trends-country-bar");
+  const addBtn = node.querySelector(".empty-add-btn");
+
+  if (countryBar) {
+    renderTrendCountryBar(node, geo);
+  }
+  if (status) {
+    status.dataset.loading = loading ? "true" : "false";
+    status.textContent = loading ? t("trendsLoading") : trends.length ? "" : t("trendsEmpty");
+  }
+  if (addBtn) {
+    addBtn.querySelector("span:last-child").textContent = t("addTab");
+  }
+
+  if (!list) return;
+
+  if (loading) {
+    list.replaceChildren();
+    const empty = document.createElement("li");
+    empty.className = "trend-item trend-empty";
+    empty.textContent = t("trendsLoading");
+    list.appendChild(empty);
+    return;
+  }
+
+  if (!trends.length) {
+    list.replaceChildren();
+    const empty = document.createElement("li");
+    empty.className = "trend-item trend-empty";
+    empty.textContent = t("trendsEmpty");
+    list.appendChild(empty);
+    return;
+  }
+
+  list.replaceChildren(
+    ...trends.map((trend, index) => {
+      const li = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `trend-item${trend.image ? "" : " trend-item--no-image"}`;
+      button.dataset.trendTitle = trend.title;
+      button.dataset.trendGeo = geo;
+      button.dataset.trendTraffic = String(trend.traffic ?? "");
+      button.dataset.trendTrafficLabel = String(trend.trafficLabel ?? "");
+      button.dataset.trendStartedAt = String(trend.startedAt ?? "");
+      button.dataset.trendStartedLabel = String(trend.startedLabel ?? "");
+      button.dataset.trendPubDate = trend.started instanceof Date && !Number.isNaN(trend.started.getTime()) ? trend.started.toISOString() : "";
+      button.dataset.trendImage = String(trend.image ?? "");
+      button.dataset.trendSource = String(trend.source ?? "");
+      button.dataset.trendLink = String(trend.link ?? "");
+      button.dataset.trendDescription = String(trend.description ?? "");
+      const imageHtml = trend.image
+        ? `<div class="trend-image"><img src="${escapeHtml(trend.image)}" alt="" loading="lazy" decoding="async" /></div>`
+        : "";
+      button.innerHTML = `
+        ${imageHtml}
+        <div class="trend-body">
+          <div class="trend-topline">
+            <span class="trend-rank">#${index + 1}</span>
+            <span class="trend-time">${escapeHtml(trend.startedLabel || "")}</span>
+          </div>
+          <span class="trend-title">${escapeHtml(trend.title)}</span>
+          <div class="trend-meta">
+            <span class="trend-chip trend-chip-traffic">${escapeHtml(trend.trafficLabel || String(trend.traffic || ""))}</span>
+            ${trend.source ? `<span class="trend-chip trend-chip-source">${escapeHtml(trend.source)}</span>` : ""}
+          </div>
+          ${trend.description ? `<p class="trend-description">${escapeHtml(trend.description)}</p>` : ""}
+        </div>
+      `;
+      li.appendChild(button);
+      return li;
+    })
+  );
+}
+
+async function refreshTrendsSlot(node, geo) {
+  if (!node) return;
+  const normalizedGeo = getTrendGeo(geo);
+  const cacheKey = getTrendsCacheKey(normalizedGeo);
+  const token = (trendsTokens.get(cacheKey) || 0) + 1;
+  trendsTokens.set(cacheKey, token);
+
+  const cached = trendsCache.get(cacheKey);
+  if (cached?.trends?.length) {
+    renderTrendsState(node, cached.trends, normalizedGeo, false);
+  } else {
+    renderTrendsState(node, [], normalizedGeo, true);
+  }
+
+  try {
+    const result = await fetchTrends(normalizedGeo);
+    if (trendsTokens.get(cacheKey) !== token) return;
+    trendsCache.set(cacheKey, { ...result, fetchedAt: Date.now() });
+    renderTrendsState(node, result.trends, normalizedGeo, false);
+  } catch (error) {
+    if (trendsTokens.get(cacheKey) !== token) return;
+    const status = node.querySelector(".trends-status");
+    const cached = trendsCache.get(cacheKey);
+    if (cached?.trends?.length) {
+      renderTrendsState(node, cached.trends, normalizedGeo, false);
+    } else {
+      renderTrendsState(node, [], normalizedGeo, false);
+    }
+    if (status) status.textContent = error?.message || t("newsUnavailable");
+  }
+}
+
+function canFetchTab(tab) {
+  return Boolean(tab?.allowShortQueryFetch) || String(tab?.query ?? tab?.title ?? "").trim().length >= 3;
+}
+
+function renderShortQueryState(tabId) {
+  const node = tabsGrid.querySelector(`[data-tab-id="${tabId}"]`);
+  if (!node) return;
+
+  const list = node.querySelector(".news-list");
+  const statusBadge = node.querySelector(".tab-status");
+  const signal = node.querySelector(".tab-signal");
+
+  if (statusBadge) {
+    statusBadge.textContent = t("shortQueryStatus");
+    statusBadge.title = t("shortQueryHint");
+  }
+  if (signal) signal.classList.toggle("active", false);
+  if (list) {
+    list.innerHTML = `<li class="news-item"><p>${t("shortQueryHint")}</p></li>`;
+  }
+  setLoading(node, false);
 }
 
 function syncTabNode(tabId) {
@@ -629,6 +1113,12 @@ function normalizeFeedText(value, limit = 280) {
 }
 
 function getFeedUrl(tab) {
+  if (tab?.feedMode === "trend") {
+    const hl = String(tab.newsHl || getTrendNewsHl(tab.region || "US")).trim() || "en-US";
+    const query = String(tab.query || "").trim() || (tab.lang === "tr" ? "haber" : "news");
+    return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=${encodeURIComponent(hl)}`;
+  }
+
   const langCode = tab.lang === "tr" ? "tr" : "en-US";
   const regionCode = resolveRegion(tab);
   const ceidLang = tab.lang === "tr" ? "tr" : "en";
@@ -765,6 +1255,11 @@ async function refreshTab(tabId, { force = false } = {}) {
   const node = tabsGrid.querySelector(`[data-tab-id="${tabId}"]`);
   if (!tab || !node) return;
 
+  if (!canFetchTab(tab)) {
+    renderShortQueryState(tabId);
+    return;
+  }
+
   const feedUrl = getFeedUrl(tab);
   const list = node.querySelector(".news-list");
   const statusBadge = node.querySelector(".tab-status");
@@ -798,7 +1293,8 @@ async function refreshTab(tabId, { force = false } = {}) {
       signal.classList.toggle("active", true);
       renderNewsList(list, sortItems(cache.items, tab.sortMode));
     } else {
-      statusBadge.textContent = locale === "tr" ? "hata" : "error";
+      statusBadge.textContent = t("statusError");
+      statusBadge.title = t("errorPrefix");
       signal.classList.toggle("active", false);
       list.innerHTML = `<li class="news-item"><p>${t("errorPrefix")} ${escapeHtml(err.message)}</p></li>`;
     }
@@ -814,16 +1310,14 @@ function scheduleTitleSearch(tabId, value) {
   if (autoSearchTimers.has(tabId)) clearTimeout(autoSearchTimers.get(tabId));
 
   if (currentLen === 0) {
-    const timer = setTimeout(() => {
-      lastAutoSearchLengths.set(tabId, 0);
-      refreshTab(tabId, { force: true });
-    }, 250);
-    autoSearchTimers.set(tabId, timer);
+    lastAutoSearchLengths.set(tabId, 0);
+    renderShortQueryState(tabId);
     return;
   }
 
   if (currentLen < 3) {
     if (currentLen < lastLen) lastAutoSearchLengths.set(tabId, currentLen);
+    renderShortQueryState(tabId);
     return;
   }
 
@@ -864,6 +1358,10 @@ function bindIcons(node) {
       setIcon(ICON_URLS.close);
       return;
     }
+    if (wrap.dataset.icon === "check") {
+      setIcon(ICON_URLS.check);
+      return;
+    }
     if (wrap.dataset.icon === "sort-newest") {
       setIcon(ICON_URLS.sortNewest);
       return;
@@ -874,33 +1372,107 @@ function bindIcons(node) {
   });
 }
 
+function updateTabsGridLayout() {
+  if (!tabsGrid) return;
+
+  const styles = getComputedStyle(tabsGrid);
+  const paddingLeft = Number.parseFloat(styles.paddingLeft) || 0;
+  const paddingRight = Number.parseFloat(styles.paddingRight) || 0;
+  const gap = Number.parseFloat(styles.columnGap || styles.gap) || TAB_COLUMN_GAP;
+  const contentWidth = Math.max(0, tabsGrid.clientWidth - paddingLeft - paddingRight);
+  const maxColumnsAtThisWidth = Math.max(1, Math.floor((contentWidth + gap) / (TAB_MIN_WIDTH + gap)));
+  const columnCount = Math.max(1, Math.min(TAB_COLUMN_CAP, maxColumnsAtThisWidth));
+  const columnWidth = Math.max(0, Math.floor((contentWidth - gap * (columnCount - 1)) / columnCount));
+
+  tabsGrid.style.setProperty("--tab-column-width", `${columnWidth}px`);
+}
+
 function createEmptySlot(primary = false) {
   const node = document.createElement("article");
   node.className = `tab-column empty-slot${primary ? " primary" : ""}`;
   node.innerHTML = primary
     ? `
     <div class="empty-slot-inner">
-      <div class="empty-slot-copy">
-        <strong>${t("emptySlotTitle")}</strong>
-      </div>
       <button type="button" class="btn primary empty-add-btn">
         <span class="icon-wrap" data-icon="plus"></span>
         <span>${t("addTab")}</span>
       </button>
+      <div class="empty-slot-copy">
+        <strong class="trends-slot-title">${t("trendsSlotTitle")}</strong>
+        <span class="trends-slot-description">${t("trendsSlotDescription")}</span>
+      </div>
+      <div class="trends-panel">
+        <div class="trends-panel-head">
+          <span class="trends-country-label">${locale === "tr" ? "G20 Ülkeleri" : "G20 Countries"}</span>
+          <span class="trends-status" data-loading="true">${t("trendsLoading")}</span>
+        </div>
+        <div class="trends-country-bar" aria-label="${locale === "tr" ? "G20 ülke seçimi" : "G20 country selection"}"></div>
+        <ul class="trends-list" aria-live="polite"></ul>
+      </div>
     </div>
   `
     : `<div class="empty-slot-inner" aria-hidden="true"></div>`;
 
   bindIcons(node);
+  const countryBar = node.querySelector(".trends-country-bar");
+  if (countryBar) {
+    countryBar.addEventListener("click", (event) => {
+      const button = event.target.closest(".trends-country-btn");
+      if (!button) return;
+      const nextGeo = normalizeTrendGeo(button.dataset.geo);
+      if (nextGeo === state.trendsGeo) return;
+      state.trendsGeo = nextGeo;
+      localStorage.setItem(TREND_GEO_STORAGE_KEY, state.trendsGeo);
+      renderTrendCountryBar(node, state.trendsGeo);
+      refreshTrendsSlot(node, state.trendsGeo);
+    });
+  }
+  renderTrendCountryBar(node, state.trendsGeo);
   const addBtn = node.querySelector(".empty-add-btn");
   if (addBtn) {
     addBtn.addEventListener("click", () => {
       if (state.tabs.length >= MAX_TABS) {
-        alert(locale === "tr" ? "Maksimum 10 sekme eklenebilir." : "A maximum of 10 tabs can be added.");
+        alert(t("maxTabsReached", { count: MAX_TABS }));
         return;
       }
-      openTabDialog();
+      const newTab = createBlankTab();
+      state.tabs.push(newTab);
+      persistTabs();
+      pendingFocusTabId = newTab.id;
+      renderAll();
     });
+  }
+
+  if (primary) {
+    const geo = getTrendGeo();
+    const trendsList = node.querySelector(".trends-list");
+    node.addEventListener("click", (event) => {
+      const trendBtn = event.target.closest(".trend-item[data-trend-title]");
+      if (!trendBtn || !node.contains(trendBtn)) return;
+      const title = String(trendBtn.dataset.trendTitle || "").trim();
+      const region = String(trendBtn.dataset.trendGeo || geo).toUpperCase();
+      if (!title) return;
+      if (state.tabs.length >= MAX_TABS) {
+        alert(t("maxTabsReached", { count: MAX_TABS }));
+        return;
+      }
+
+      const newTab = createTrendTab({ title }, region);
+      state.tabs.push(newTab);
+      persistTabs();
+      pendingFocusTabId = newTab.id;
+      renderAll();
+    });
+
+    if (trendsList) {
+      const cache = trendsCache.get(getTrendsCacheKey(geo));
+      if (cache?.trends?.length) {
+        renderTrendsState(node, cache.trends, geo, false);
+      } else {
+        renderTrendsState(node, [], geo, true);
+      }
+      refreshTrendsSlot(node, geo);
+    }
   }
 
   return node;
@@ -922,6 +1494,18 @@ function renderTab(tab) {
   const freshnessGroup = node.querySelector(".freshness-group");
   const freshnessMenu = node.querySelector(".freshness-menu");
   let freshnessCloseTimer = null;
+  let deleteArmed = false;
+
+  const setDeleteState = (armed) => {
+    deleteArmed = armed;
+    deleteBtn.classList.toggle("armed", armed);
+    deleteBtn.classList.toggle("danger", !armed);
+    deleteBtn.innerHTML = `<span class="icon-wrap" data-icon="${armed ? "check" : "close"}"></span>`;
+    bindIcons(deleteBtn);
+    deleteBtn.setAttribute("aria-pressed", String(armed));
+    deleteBtn.setAttribute("aria-label", armed ? t("deleteConfirm") : t("delete"));
+    deleteBtn.setAttribute("title", armed ? t("deleteConfirm") : t("delete"));
+  };
 
   const openFreshnessMenu = () => {
     if (freshnessCloseTimer) {
@@ -948,7 +1532,7 @@ function renderTab(tab) {
   });
 
   titleInput.value = tab.title;
-  titleInput.placeholder = locale === "tr" ? "Anahtar kelime" : "Keyword";
+  titleInput.placeholder = t("searchInputPlaceholder");
   langBtn.textContent = getLanguageCode(tab.lang);
   freshnessBtn.textContent = formatFreshnessButtonLabel(tab.freshness || DEFAULT_FRESHNESS);
   sortBtn.innerHTML = `<span class="icon-wrap" data-icon="${tab.sortMode === "time_desc" ? "sort-newest" : "sort-oldest"}"></span>`;
@@ -956,6 +1540,7 @@ function renderTab(tab) {
   langBtn.classList.remove("active");
   freshnessBtn.classList.toggle("active", tab.freshness !== DEFAULT_FRESHNESS);
   sortBtn.classList.toggle("active", tab.sortMode === "time_desc");
+  setDeleteState(false);
   langBtn.setAttribute("aria-pressed", "false");
   langBtn.setAttribute("aria-label", tab.lang === "tr" ? t("languageTurkish") : t("languageEnglish"));
   langBtn.setAttribute("title", tab.lang === "tr" ? t("languageTurkish") : t("languageEnglish"));
@@ -971,7 +1556,7 @@ function renderTab(tab) {
 
   titleInput.addEventListener("input", () => {
     const value = titleInput.value;
-    updateTab(tab.id, { title: value, query: value, customTitle: true });
+    updateTab(tab.id, { title: value, customTitle: true, allowShortQueryFetch: false });
     scheduleTitleSearch(tab.id, value);
   });
 
@@ -1044,9 +1629,22 @@ function renderTab(tab) {
   });
 
   deleteBtn.addEventListener("click", () => {
-    deleteTargetTabId = tab.id;
-    deleteConfirmText.textContent = t("deleteTabQuestion", { title: tab.title || t("dialogNewTab") });
-    deleteConfirmDialog.showModal();
+    if (!deleteArmed) {
+      setDeleteState(true);
+      return;
+    }
+
+    state.tabs = state.tabs.filter((item) => item.id !== tab.id);
+    newsCache.delete(tab.id);
+    persistTabs();
+    renderAll();
+  });
+
+  deleteBtn.addEventListener("mouseleave", () => {
+    if (deleteArmed) setDeleteState(false);
+  });
+  deleteBtn.addEventListener("focusout", () => {
+    if (deleteArmed) setDeleteState(false);
   });
 
   bindIcons(node);
@@ -1054,10 +1652,14 @@ function renderTab(tab) {
 
   const cache = newsCache.get(tab.id);
   const itemCount = cache?.items?.length || 0;
-  statusBadge.textContent = itemCount ? String(itemCount) : t("pending");
-  statusBadge.title = itemCount ? t("newsCount", { count: itemCount }) : t("pending");
-  signal.classList.toggle("active", itemCount > 0);
-  if (cache?.items?.length) renderNewsList(node.querySelector(".news-list"), sortItems(cache.items, tab.sortMode));
+  if (!canFetchTab(tab)) {
+    renderShortQueryState(tab.id);
+  } else {
+    statusBadge.textContent = itemCount ? String(itemCount) : t("pending");
+    statusBadge.title = itemCount ? t("newsCount", { count: itemCount }) : t("pending");
+    signal.classList.toggle("active", itemCount > 0);
+    if (cache?.items?.length) renderNewsList(node.querySelector(".news-list"), sortItems(cache.items, tab.sortMode));
+  }
 
   refreshTab(tab.id);
 }
@@ -1131,6 +1733,8 @@ function startAutoRefresh() {
 }
 
 function renderAll() {
+  updateTabsGridLayout();
+
   const desiredIds = new Set(state.tabs.map((tab) => tab.id));
 
   tabsGrid.querySelectorAll(".tab-column[data-tab-id]").forEach((node) => {
@@ -1158,10 +1762,39 @@ function renderAll() {
   tabsGrid.querySelectorAll(".empty-slot").forEach((node) => node.remove());
 
   tabsGrid.appendChild(createEmptySlot(true));
+
+  if (pendingFocusTabId) {
+    const focusId = pendingFocusTabId;
+    pendingFocusTabId = null;
+    requestAnimationFrame(() => {
+      const input = tabsGrid.querySelector(`[data-tab-id="${focusId}"] .tab-title-input`);
+      if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    });
+  }
+
+  requestAnimationFrame(updateTabsGridLayout);
+}
+
+async function registerApiServiceWorker() {
+  if (!("serviceWorker" in navigator)) return;
+
+  try {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch (error) {
+    console.warn("Service worker registration skipped:", error);
+  }
 }
 
 document.documentElement.lang = locale;
 renderLocalizedStaticTexts();
 setIntervalButtonState();
+registerApiServiceWorker();
 startAutoRefresh();
 renderAll();
+
+window.addEventListener("resize", () => {
+  updateTabsGridLayout();
+});

@@ -3,19 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Lastminute - Haber Takip Panosu</title>
+    <title>Lastminute - Haber Takibi</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div>
         <h1>Lastminute</h1>
-        <p id="appSubtitle">Google News RSS ile TweetDeck tarzı çoklu haber takip uygulaması</p>
+        <p id="appSubtitle">Arama kelimelerine göre güncel haberleri yan yana takip et.</p>
       </div>
 
       <div class="refresh-control">
         <div id="refreshMeter" class="refresh-meter" aria-hidden="true"></div>
         <label class="inline-control">
+          <span id="intervalLabel">Yenileme aralığı</span>
           <select id="intervalSelect">
             <option value="5">5 sn</option>
             <option value="15" selected>15 sn</option>
@@ -45,15 +46,15 @@
 
     <dialog id="tabDialog" class="dialog">
       <form id="tabForm" method="dialog" class="dialog-content">
-        <h2 id="tabDialogTitle">Yeni Sekme</h2>
+        <h2 id="tabDialogTitle">Yeni arama</h2>
 
         <label>
-          <span id="tabTitleLabel">Sekme başlığı</span>
-          <input required id="tabTitle" maxlength="40" placeholder="Örn: Finans" />
+          <span id="tabTitleLabel">Arama kelimesi</span>
+          <input required id="tabTitle" maxlength="40" placeholder="Örn: ekonomi" />
         </label>
 
         <label>
-          <span id="tabLanguageLabel">Dil</span>
+          <span id="tabLanguageLabel">Haber dili</span>
           <select id="tabLanguage">
             <option value="tr">🇹🇷</option>
             <option value="en">EN</option>
@@ -61,7 +62,7 @@
         </label>
 
         <label>
-          <span id="tabFreshnessLabel">Haber tazeliği</span>
+          <span id="tabFreshnessLabel">Zaman aralığı</span>
           <select id="tabFreshness">
             <option value="1h" selected>1 saat</option>
             <option value="3h">3 saat</option>
@@ -76,16 +77,6 @@
           <button type="submit" class="btn primary">Kaydet</button>
         </div>
       </form>
-    </dialog>
-
-    <dialog id="deleteConfirmDialog" class="dialog compact-dialog">
-      <div class="dialog-content compact-content">
-        <p id="deleteConfirmText">Silinsin mi?</p>
-        <div class="actions compact-actions">
-          <button type="button" class="btn" id="deleteNoBtn">Hayır</button>
-          <button type="button" class="btn primary" id="deleteCheckBtn">Sil</button>
-        </div>
-      </div>
     </dialog>
 
     <template id="tabTemplate">
@@ -104,7 +95,7 @@
                 <button class="icon-btn move-right-btn" type="button" title="Sağa taşı">
                   <span class="icon-wrap" data-icon="arrow-right"></span>
                 </button>
-                <button class="icon-btn danger delete-btn" type="button" title="Sil">
+                <button class="icon-btn danger delete-btn" type="button" title="Aramayı sil">
                   <span class="icon-wrap" data-icon="close"></span>
                 </button>
               </div>
