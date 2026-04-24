@@ -289,20 +289,80 @@ main {
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
-  max-width: 22ch;
+  max-width: none;
+  width: 100%;
 }
 
 .empty-slot.primary .empty-slot-inner {
   grid-template-rows: auto auto 1fr;
   align-content: start;
   justify-items: stretch;
+  padding: 12px;
+  text-align: left;
+}
+
+.empty-slot.primary .empty-slot-copy {
+  width: 100%;
+  justify-items: stretch;
   text-align: left;
 }
 
 .empty-slot.primary .empty-add-btn {
-  justify-self: stretch;
+  justify-self: auto;
+  width: auto;
+  order: 0;
+}
+
+.empty-slot-quick-create {
   width: 100%;
-  order: -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(17, 24, 39, 0.98), rgba(10, 16, 30, 0.99)),
+    linear-gradient(135deg, rgba(74, 222, 128, 0.12), transparent 42%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 12px 24px rgba(2, 6, 23, 0.22);
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-slot-query-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  color: #edf5ff;
+  font-size: 1.08rem;
+  font-weight: 900;
+  letter-spacing: 0.012em;
+  outline: none;
+  line-height: 1.25;
+}
+
+.empty-slot-query-input::placeholder {
+  color: rgba(177, 196, 221, 0.6);
+}
+
+.empty-add-btn {
+  flex: 0 0 auto;
+  min-width: 34px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 4px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 1.05rem;
+  line-height: 1;
 }
 
 .trends-panel {
@@ -317,14 +377,14 @@ main {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex-wrap: wrap;
 }
 
 .trends-country-label {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -333,18 +393,18 @@ main {
 .trends-country-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
 }
 
 .trends-hour-btn {
   appearance: none;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 2px;
   background: rgba(15, 23, 42, 0.82);
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -371,11 +431,11 @@ main {
 .trends-country-btn {
   appearance: none;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  padding: 4px 8px;
+  padding: 3px 7px;
   border-radius: 2px;
   background: rgba(15, 23, 42, 0.82);
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -409,13 +469,14 @@ main {
 .trends-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 8px 0 10px;
   display: grid;
   gap: 6px;
   min-height: 0;
   height: 100%;
   max-height: none;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .trend-item {
@@ -594,7 +655,7 @@ main {
 }
 
 .empty-slot .btn.primary {
-  width: 100%;
+  width: auto;
   justify-content: center;
 }
 
@@ -618,7 +679,7 @@ main {
 .tab-header-top {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   gap: 12px;
   width: 100%;
 }
@@ -651,10 +712,34 @@ main {
   background: linear-gradient(180deg, rgba(74, 222, 128, 0.9), rgba(96, 165, 250, 0.4));
 }
 
+.tab-signal {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: rgba(4, 9, 18, 0.9);
+  color: #86efac;
+  flex: 0 0 auto;
+  font-size: 0.82rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: none;
+  box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.06);
+}
+
+.tab-signal.active {
+  background: rgba(22, 163, 74, 0.18);
+  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.08), inset 0 0 0 1px rgba(74, 222, 128, 0.12);
+}
+
 .tab-title-input {
   width: 100%;
   padding: 0;
+  margin-top: 0;
   border: none;
+  border-radius: 0;
   background: transparent;
   color: #edf5ff;
   font-size: 1.08rem;
@@ -667,21 +752,6 @@ main {
 
 .tab-title-input::placeholder {
   color: rgba(177, 196, 221, 0.6);
-}
-
-.tab-signal {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  background: rgba(74, 222, 128, 0.36);
-  border: 1px solid rgba(74, 222, 128, 0.54);
-  box-shadow: 0 0 0 4px rgba(74, 222, 128, 0.08), 0 0 18px rgba(74, 222, 128, 0.18);
-  flex: 0 0 auto;
-}
-
-.tab-signal.active {
-  background: #86efac;
-  box-shadow: 0 0 0 5px rgba(134, 239, 172, 0.12), 0 0 22px rgba(134, 239, 172, 0.24);
 }
 
 .tab-status {
@@ -1082,6 +1152,10 @@ select {
 
 #intervalSelect {
   width: 74px;
+  height: 32px;
+  margin-top: 0;
+  padding: 0 10px;
+  border-radius: 4px;
 }
 
 .refresh-control {
@@ -1089,12 +1163,13 @@ select {
   align-items: center;
   gap: 8px;
   justify-self: end;
+  height: 32px;
 }
 
 .refresh-meter {
   --progress: 1;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   position: relative;
   flex: 0 0 auto;

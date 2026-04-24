@@ -165,7 +165,7 @@ const I18N = {
     deleteTabQuestion: '"{title}" silinsin mi?',
     emptySlotTitle: "Yeni arama",
     emptySlotDescription: "Yeni bir arama sütunu aç.",
-    addTab: "Yeni arama",
+    addTab: "Yeni haber kutusu",
     trendsSlotTitle: "Trendler",
     trendsSlotDescription: "Google Trends'te öne çıkan aramalardan birini seç.",
     trendsCountryLabel: "Ülke seç",
@@ -247,7 +247,7 @@ const I18N = {
     deleteTabQuestion: 'Delete "{title}"?',
     emptySlotTitle: "New search",
     emptySlotDescription: "Open a new search column.",
-    addTab: "New search",
+    addTab: "New news column",
     trendsSlotTitle: "Trends",
     trendsSlotDescription: "Pick one of the searches trending on Google Trends.",
     trendsCountryLabel: "Choose country",
@@ -581,8 +581,8 @@ function renderLocalizedStaticTexts() {
   document.querySelectorAll(".trends-status").forEach((node) => {
     if (node.dataset.loading === "true") node.textContent = t("trendsLoading");
   });
-  document.querySelectorAll(".empty-add-btn span:last-child").forEach((node) => {
-    node.textContent = t("addTab");
+  document.querySelectorAll(".empty-add-btn").forEach((node) => {
+    node.textContent = "+";
   });
 }
 
@@ -619,6 +619,29 @@ function createBlankTab() {
     customTitle: true,
     allowShortQueryFetch: false
   };
+}
+
+function createTabFromQuickQuery(rawValue) {
+  const query = String(rawValue ?? "").trim();
+  if (!query) return false;
+  if (state.tabs.length >= MAX_TABS) {
+    alert(t("maxTabsReached", { count: MAX_TABS }));
+    return false;
+  }
+
+  const newTab = {
+    ...createBlankTab(),
+    title: query,
+    query,
+    customTitle: true,
+    allowShortQueryFetch: query.length < 3
+  };
+
+  state.tabs.push(newTab);
+  persistTabs();
+  pendingFocusTabId = newTab.id;
+  renderAll();
+  return true;
 }
 
 function getTrendGeo(targetGeo = state.trendsGeo) {
@@ -832,7 +855,7 @@ function renderTrendsState(node, trends, geo, loading = false) {
     status.textContent = loading ? t("trendsLoading") : trends.length ? "" : t("trendsEmpty");
   }
   if (addBtn) {
-    addBtn.querySelector("span:last-child").textContent = t("addTab");
+    addBtn.textContent = "+";
   }
 
   if (!list) return;
@@ -1391,10 +1414,10 @@ function createEmptySlot(primary = false) {
   node.innerHTML = primary
     ? `
     <div class="empty-slot-inner">
-      <button type="button" class="btn primary empty-add-btn">
-        <span class="icon-wrap" data-icon="plus"></span>
-        <span>${t("addTab")}</span>
-      </button>
+      <div class="empty-slot-quick-create">
+        <input class="empty-slot-query-input" type="text" maxlength="80" placeholder="dolar" />
+        <button type="button" class="btn primary empty-add-btn" title="${t("addTab")}" aria-label="${t("addTab")}">+</button>
+      </div>
       <div class="empty-slot-copy">
         <strong class="trends-slot-title">${t("trendsSlotTitle")}</strong>
         <span class="trends-slot-description">${t("trendsSlotDescription")}</span>
@@ -1426,19 +1449,21 @@ function createEmptySlot(primary = false) {
     });
   }
   renderTrendCountryBar(node, state.trendsGeo);
+  const quickInput = node.querySelector(".empty-slot-query-input");
   const addBtn = node.querySelector(".empty-add-btn");
-  if (addBtn) {
-    addBtn.addEventListener("click", () => {
-      if (state.tabs.length >= MAX_TABS) {
-        alert(t("maxTabsReached", { count: MAX_TABS }));
-        return;
-      }
-      const newTab = createBlankTab();
-      state.tabs.push(newTab);
-      persistTabs();
-      pendingFocusTabId = newTab.id;
-      renderAll();
+  const submitQuickTab = () => {
+    if (!quickInput) return;
+    createTabFromQuickQuery(quickInput.value);
+  };
+  if (quickInput) {
+    quickInput.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      event.preventDefault();
+      submitQuickTab();
     });
+  }
+  if (addBtn) {
+    addBtn.addEventListener("click", submitQuickTab);
   }
 
   if (primary) {
